@@ -5,17 +5,18 @@ import json
 import time
 import datetime
 import inquestlabs
-import multiprocessing
+import threading
 
 """
 - metadata must be superset of all JSON.
-- multiprocessing may have to be swapped with threading (jython behind the scenes).
+- multiprocessing has to be swapped with threading (jython behind the scenes).
 - requests package may need to be converted to wheel.
 - update timeout to be .9 * RF_TIMEOUT
 """
 
-DEBUG   = True
-TIMEOUT = 30
+DEBUG     = True
+TIMEOUT   = 30
+DATASTORE = {}
 
 ########################################################################################################################
 def log (msg, minor=False):
@@ -30,13 +31,15 @@ def log (msg, minor=False):
 
 
 ########################################################################################################################
-def worker (labs, endpoint, arguments, response):
+def worker (labs, endpoint, arguments):
     """
-    Wrapper function for multiprocessing spin-outs.
+    Wrapper function for threaded spin-outs.
     """
 
+    global DATASTORE
+
     log("worker:%s(%s)" % (endpoint, arguments), minor=True)
-    response[endpoint] = getattr(labs, endpoint)(*arguments)
+    DATASTORE[endpoint] = getattr(labs, endpoint)(*arguments)
 
 
 ########################################################################################################################
@@ -49,8 +52,6 @@ def request (request_dict, auth_info):
     labs = inquestlabs.inquestlabs_api(auth_info["password"])
     ioc  = request_dict["entity"]["name"]
     kind = request_dict["entity"]["type"]
-    mngr = multiprocessing.Manager()
-    resp = mngr.dict()
     jobs = []
 
     log("received kind=%s ioc=%s" % (kind, ioc))
@@ -59,22 +60,26 @@ def request (request_dict, auth_info):
     if kind == "InternetDomainName":
 
         # Lookup API.
-        job = multiprocessing.Process(target=worker, args=(labs, "lookup", ["domain", ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "lookup", ["domain", ioc]))
+        job.setName("lookup-domain")
         jobs.append(job)
         job.start()
 
         # DFIdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "dfi_search", ["ioc", "domain", ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "dfi_search", ["ioc", "domain", ioc]))
+        job.setName("dfi-domain")
         jobs.append(job)
         job.start()
 
         # REPdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "repdb_search", [ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "repdb_search", [ioc]))
+        job.setName("rep-domain")
         jobs.append(job)
         job.start()
 
         # IOCdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "iocdb_search", [ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "iocdb_search", [ioc]))
+        job.setName("ioc-domain")
         jobs.append(job)
         job.start()
 
@@ -82,22 +87,26 @@ def request (request_dict, auth_info):
     elif kind == "IpAddress":
 
         # Lookup API.
-        job = multiprocessing.Process(target=worker, args=(labs, "lookup", ["ip", ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "lookup", ["ip", ioc]))
+        job.setName("lookup-ip")
         jobs.append(job)
         job.start()
 
         # DFIdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "dfi_search", ["ioc", "ip", ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "dfi_search", ["ioc", "ip", ioc]))
+        job.setName("dfi-ip")
         jobs.append(job)
         job.start()
 
         # REPdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "repdb_search", [ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "repdb_search", [ioc]))
+        job.setName("rep-ip")
         jobs.append(job)
         job.start()
 
         # IOCdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "iocdb_search", [ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "iocdb_search", [ioc]))
+        job.setName("ioc-ip")
         jobs.append(job)
         job.start()
 
@@ -105,17 +114,20 @@ def request (request_dict, auth_info):
     elif kind == "URL":
 
         # DFIdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "dfi_search", ["ioc", "url", ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "dfi_search", ["ioc", "url", ioc]))
+        job.setName("dfi-url")
         jobs.append(job)
         job.start()
 
         # REPdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "repdb_search", [ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "repdb_search", [ioc]))
+        job.setName("rep-url")
         jobs.append(job)
         job.start()
 
         # IOCdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "iocdb_search", [ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "iocdb_search", [ioc]))
+        job.setName("ioc-url")
         jobs.append(job)
         job.start()
 
@@ -135,12 +147,14 @@ def request (request_dict, auth_info):
             raise Exception("invalid hash kind")
 
         # DFIdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "dfi_search", ["hash", hash_kind, ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "dfi_search", ["hash", hash_kind, ioc]))
+        job.setName("dfi-hash")
         jobs.append(job)
         job.start()
 
         # IOCdb.
-        job = multiprocessing.Process(target=worker, args=(labs, "iocdb_search", [ioc], resp))
+        job = threading.Thread(target=worker, args=(labs, "iocdb_search", [ioc]))
+        job.setName("ioc-url")
         jobs.append(job)
         job.start()
 
@@ -155,21 +169,24 @@ def request (request_dict, auth_info):
             break
 
         # this prevents CPU hogging.
-        time.sleep(.1)
+        time.sleep(.5)
 
     # we only enter this if we didn't 'break' above.
     else:
-        log("timeout reached, killing jobs...")
+        log("timeout reached, the following jobs failed to complete...")
         for job in jobs:
-            job.terminate()
-            job.join()
+            if job.is_alive():
+                log("job never completed: %s" % job.getName())
+            else:
+                job.join()
 
     # record completion time.
     elapsed = time.time() - start
     log("completed query in %d seconds." % elapsed, minor=True)
 
     # return results.
-    return json.dumps(dict(resp))
+    return json.dumps(DATASTORE)
+
 
 ########################################################################################################################
 if __name__ == "__main__":
