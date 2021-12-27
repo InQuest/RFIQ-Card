@@ -49,7 +49,7 @@ def request (request_dict, auth_info):
     """
 
     # instantiate labs, pull indicator from request dictionary, setup shared variable response dictionary.
-    labs = inquestlabs.inquestlabs_api(auth_info["password"])
+    labs = inquestlabs.inquestlabs_api(auth_info["apikey"])
     ioc  = request_dict["entity"]["name"]
     kind = request_dict["entity"]["type"]
     jobs = []
