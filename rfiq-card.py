@@ -38,8 +38,9 @@ def worker (labs, endpoint, arguments):
 
     global DATASTORE
 
-    log("worker:%s(%s)" % (endpoint, arguments), minor=True)
+    log("worker-started:%s(%s)" % (endpoint, arguments), minor=True)
     DATASTORE[endpoint] = getattr(labs, endpoint)(*arguments)
+    log("worker-completed:%s(%s)" % (endpoint, arguments), minor=True)
 
 
 ########################################################################################################################
@@ -192,8 +193,7 @@ def request (request_dict, auth_info):
 if __name__ == "__main__":
     auth_info = \
     {
-        "username": "user",
-        "password": "pass"
+        "apikey": "my-api-key"
     }
 
     # Domain.
