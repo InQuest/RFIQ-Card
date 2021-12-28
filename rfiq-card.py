@@ -19,6 +19,103 @@ TIMEOUT   = 30
 DATASTORE = {}
 
 ########################################################################################################################
+def groom_dfidb (data):
+    """
+    data is a list.
+    """
+
+    groomed = []
+    ok_keys = \
+    [
+        "attribute", "classification", "file_type", "first_seen", "last_modified",
+        "len_code", "len_context", "len_metadata", "len_ocr", "mime_type", "sha256", "size",
+    ]
+
+    for d in data:
+        gd = {}
+
+        for k, v in d.items():
+            if k in ok_keys:
+                gd[k] = v
+
+        groomed.append(gd)
+
+    return groomed
+
+
+########################################################################################################################
+def groom_iocdb (data):
+    """
+    data is a list.
+    """
+
+    groomed = []
+    ok_keys = \
+    [
+        "artifact", "artifact_type", "created_date", "reference_link", "reference_text",
+    ]
+
+    for d in data:
+        gd = {}
+
+        for k, v in d.items():
+            if k in ok_keys:
+                gd[k] = v
+
+        groomed.append(gd)
+
+    return groomed
+
+
+########################################################################################################################
+def groom_repdb (data):
+    """
+    data is a list.
+    """
+
+    groomed = []
+    ok_keys = \
+    [
+        "created_date", "data", "data_type", "derived", "derived_type", "source", "source_url",
+    ]
+
+    for d in data:
+        gd = {}
+
+        for k, v in d.items():
+            if k in ok_keys:
+                gd[k] = v
+
+        groomed.append(gd)
+
+    return groomed
+
+
+########################################################################################################################
+def groom_lookup (data):
+    """
+    data is a dictionary.
+    """
+
+    groomed = {}
+    ok_keys = \
+    [
+        # IP keys
+        "asn", "asn_cidr", "asn_country_code", "asn_date", "asn_description", "asn_registry",
+
+        # domain keys.
+        "created_on", "dynamic_dns", "expires_on", "global_rank", "has_dnssec", "ip_address", "name_servers",
+        "registrant", "registrant_country", "registrar", "updated_on",
+    ]
+
+    for k, v in data.items():
+        if k in ok_keys:
+            groomed[k] = v
+
+    return groomed
+
+
+########################################################################################################################
 def log (msg, minor=False):
     """
     If minor is raised, then only print when DEBUG=True
@@ -28,19 +125,6 @@ def log (msg, minor=False):
         return
 
     sys.stderr.write("[%s] %s\n" % (datetime.datetime.now().isoformat(), msg))
-
-
-########################################################################################################################
-def worker (labs, endpoint, arguments):
-    """
-    Wrapper function for threaded spin-outs.
-    """
-
-    global DATASTORE
-
-    log("worker-started:%s(%s)" % (endpoint, arguments), minor=True)
-    DATASTORE[endpoint] = getattr(labs, endpoint)(*arguments)
-    log("worker-completed:%s(%s)" % (endpoint, arguments), minor=True)
 
 
 ########################################################################################################################
@@ -61,25 +145,25 @@ def request (request_dict, auth_info):
     if kind == "InternetDomainName":
 
         # Lookup API.
-        job = threading.Thread(target=worker, args=(labs, "lookup", ["domain", ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_lookup, "lookup", ["domain", ioc]))
         job.setName("lookup-domain")
         jobs.append(job)
         job.start()
 
         # DFIdb.
-        job = threading.Thread(target=worker, args=(labs, "dfi_search", ["ioc", "domain", ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_dfidb, "dfi_search", ["ioc", "domain", ioc]))
         job.setName("dfi-domain")
         jobs.append(job)
         job.start()
 
         # REPdb.
-        job = threading.Thread(target=worker, args=(labs, "repdb_search", [ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_repdb, "repdb_search", [ioc]))
         job.setName("rep-domain")
         jobs.append(job)
         job.start()
 
         # IOCdb.
-        job = threading.Thread(target=worker, args=(labs, "iocdb_search", [ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_iocdb, "iocdb_search", [ioc]))
         job.setName("ioc-domain")
         jobs.append(job)
         job.start()
@@ -88,25 +172,25 @@ def request (request_dict, auth_info):
     elif kind == "IpAddress":
 
         # Lookup API.
-        job = threading.Thread(target=worker, args=(labs, "lookup", ["ip", ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_lookup, "lookup", ["ip", ioc]))
         job.setName("lookup-ip")
         jobs.append(job)
         job.start()
 
         # DFIdb.
-        job = threading.Thread(target=worker, args=(labs, "dfi_search", ["ioc", "ip", ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_dfidb, "dfi_search", ["ioc", "ip", ioc]))
         job.setName("dfi-ip")
         jobs.append(job)
         job.start()
 
         # REPdb.
-        job = threading.Thread(target=worker, args=(labs, "repdb_search", [ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_repdb, "repdb_search", [ioc]))
         job.setName("rep-ip")
         jobs.append(job)
         job.start()
 
         # IOCdb.
-        job = threading.Thread(target=worker, args=(labs, "iocdb_search", [ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_iocdb, "iocdb_search", [ioc]))
         job.setName("ioc-ip")
         jobs.append(job)
         job.start()
@@ -115,19 +199,19 @@ def request (request_dict, auth_info):
     elif kind == "URL":
 
         # DFIdb.
-        job = threading.Thread(target=worker, args=(labs, "dfi_search", ["ioc", "url", ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_dfidb, "dfi_search", ["ioc", "url", ioc]))
         job.setName("dfi-url")
         jobs.append(job)
         job.start()
 
         # REPdb.
-        job = threading.Thread(target=worker, args=(labs, "repdb_search", [ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_repdb, "repdb_search", [ioc]))
         job.setName("rep-url")
         jobs.append(job)
         job.start()
 
         # IOCdb.
-        job = threading.Thread(target=worker, args=(labs, "iocdb_search", [ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_iocdb, "iocdb_search", [ioc]))
         job.setName("ioc-url")
         jobs.append(job)
         job.start()
@@ -148,13 +232,13 @@ def request (request_dict, auth_info):
             raise Exception("invalid hash kind")
 
         # DFIdb.
-        job = threading.Thread(target=worker, args=(labs, "dfi_search", ["hash", hash_kind, ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_dfidb, "dfi_search", ["hash", hash_kind, ioc]))
         job.setName("dfi-hash")
         jobs.append(job)
         job.start()
 
         # IOCdb.
-        job = threading.Thread(target=worker, args=(labs, "iocdb_search", [ioc]))
+        job = threading.Thread(target=worker, args=(labs, groom_iocdb, "iocdb_search", [ioc]))
         job.setName("ioc-url")
         jobs.append(job)
         job.start()
@@ -190,7 +274,22 @@ def request (request_dict, auth_info):
 
 
 ########################################################################################################################
+def worker (labs, groomer, endpoint, arguments):
+    """
+    Wrapper function for threaded spin-outs.
+    """
+
+    global DATASTORE
+
+    log("worker-started:%s(%s)" % (endpoint, arguments), minor=True)
+    DATASTORE[endpoint] = groomer(getattr(labs, endpoint)(*arguments))
+    log("worker-completed:%s(%s)" % (endpoint, arguments), minor=True)
+
+
+########################################################################################################################
 if __name__ == "__main__":
+    print("unit testing mode...")
+
     auth_info = \
     {
         "apikey": "my-api-key"
@@ -206,6 +305,7 @@ if __name__ == "__main__":
         }
     }
 
+    print("testing domain...")
     print(request(request_dict, auth_info))
 
     # IP.
@@ -218,6 +318,7 @@ if __name__ == "__main__":
         }
     }
 
+    print("testing IP...")
     print(request(request_dict, auth_info))
 
     # Hash.
@@ -230,6 +331,7 @@ if __name__ == "__main__":
         }
     }
 
+    print("testing hash...")
     print(request(request_dict, auth_info))
 
     # URL.
@@ -242,4 +344,7 @@ if __name__ == "__main__":
         }
     }
 
+    print("testing url...")
     print(request(request_dict, auth_info))
+
+    print("QED")

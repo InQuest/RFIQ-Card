@@ -1,0 +1,239 @@
+{
+    "entries": [
+        {
+            "key": "lookup",
+            "label": "InQuest Lookup",
+            "type": "dict",
+            "entries": [
+                {
+                    "key": "asn",
+                    "label": "ASN",
+                    "type": "text"
+                 },
+                {
+                    "key": "asn_cidr",
+                    "label": "ASN CIDR Block",
+                    "type": "text"
+                 },
+                {
+                    "key": "asn_country_code",
+                    "label": "ASN Country Code",
+                    "type": "text"
+                 },
+                {
+                    "key": "asn_date",
+                    "label": "ASN Date",
+                    "type": "text"
+                 },
+                {
+                    "key": "asn_description",
+                    "label": "ASN Description",
+                    "type": "text"
+                 },
+                {
+                    "key": "asn_registry",
+                    "label": "ASN Registry",
+                    "type": "text"
+                 },
+                {
+                    "key": "created_on",
+                    "label": "Created On",
+                    "type": "text"
+                 },
+                {
+                    "key": "expires_on",
+                    "label": "Expires On",
+                    "type": "text"
+                 },
+                {
+                    "key": "updated_on",
+                    "label": "Updated On",
+                    "type": "text"
+                 },
+                {
+                    "key": "dynamic_dns",
+                    "label": "Dynamic DNS?",
+                    "type": "text"
+                 },
+                {
+                    "key": "global_rank",
+                    "label": "Global Popularity Rank",
+                    "type": "text"
+                 },
+                {
+                    "key": "has_dnssec",
+                    "label": "Has DNSSEC?",
+                    "type": "text"
+                 },
+                {
+                    "key": "ip_address",
+                    "label": "Resolved IP Address",
+                    "type": "IpAddress",
+                 },
+                {
+                    "key": "name_servers",
+                    "label": "Name Servers",
+                    "type": "list",
+                    "item": {
+                        "type": "InternetDomainName"
+                    }
+                 },
+                {
+                    "key": "registrant",
+                    "label": "Registrant",
+                    "type": "text"
+                 },
+                {
+                    "key": "registrant_country",
+                    "label": "Registrant Country",
+                    "type": "text"
+                 },
+                {
+                    "key": "registrar",
+                    "label": "Registrar",
+                    "type": "text"
+                 }
+            ]
+        },
+        {
+            "key": "dfi_search",
+            "label": "InQuest DFIdb Search",
+            "type": "list",
+            "item": {
+                "type" : "dict",
+                "entries": [
+                    {
+                        "key": "sha256",
+                        "label": "SHA256 File Hash",
+                        "type": "text"
+                     },
+                    {
+                        "key": "file_type",
+                        "label": "File Kind",
+                        "type": "text",
+                     },
+                    {
+                        "key": "mime_type",
+                        "label": "MIME Type",
+                        "type": "text",
+                     },
+                    {
+                        "key": "size",
+                        "label": "File Size",
+                        "type": "integer",
+                     },
+                    {
+                        "key": "first_seen",
+                        "label": "First Seen",
+                        "type": "text",
+                     },
+                    {
+                        "key": "last_modified",
+                        "label": "Last Modified",
+                        "type": "text",
+                     },
+                    {
+                        "key": "len_context",
+                        "label": "Context Length",
+                        "type": "text",
+                     },
+                    {
+                        "key": "len_ocr",
+                        "label": "OCR Length",
+                        "type": "text",
+                     },
+                    {
+                        "key": "len_metadata",
+                        "label": "Metadata Length",
+                        "type": "text",
+                     },
+                    {
+                        "key": "len_code",
+                        "label": "Code Length",
+                        "type": "text",
+                     }
+                ]
+            }
+        },
+        {
+            "key": "repdb_search",
+            "label": "InQuest RepDB Search",
+            "type": "list",
+            "item": {
+                "type" : "dict",
+                "entries": [
+                    {
+                        "key": "created_date",
+                        "label": "Captured On",
+                        "type": "text"
+                     },
+                    {
+                        "key": "data_type",
+                        "label": "Data Kind",
+                        "type": "text",
+                     },
+                    {
+                        "key": "data",
+                        "label": "Data",
+                        "type": "text",
+                     },
+                    {
+                        "key": "derived_type",
+                        "label": "Derived Data Kind",
+                        "type": "text",
+                     },
+                    {
+                        "key": "derived_data",
+                        "label": "Derived Data",
+                        "type": "text",
+                     },
+                    {
+                        "key": "source",
+                        "label": "Source Name",
+                        "type": "text",
+                     },
+                    {
+                        "key": "source_url",
+                        "label": "Source URL",
+                        "type": "text",
+                     }
+                ]
+            }
+        },
+        {
+            "key": "iocdb_search",
+            "label": "InQuest IOCdb Search",
+            "type": "list",
+            "item": {
+                "type" : "dict",
+                "entries": [
+                    {
+                        "key": "created_date",
+                        "label": "Captured On",
+                        "type": "text"
+                     },
+                    {
+                        "key": "artifact_type",
+                        "label": "IOC Kind",
+                        "type": "text",
+                     },
+                    {
+                        "key": "artifact",
+                        "label": "IOC",
+                        "type": "text",
+                     },
+                    {
+                        "key": "reference_text",
+                        "label": "Reference Text",
+                        "type": "text",
+                     },
+                    {
+                        "key": "reference_link",
+                        "label": "Reference URL",
+                        "type": "text",
+                     }
+                ]
+            }
+        }
+    ]
+}
