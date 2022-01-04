@@ -1,8 +1,10 @@
 # Project Specific
 
 rfiq_extension.tgz
+recordedfuture_docs/
 
 # Byte-compiled / optimized / DLL files
+.DS_Store
 __pycache__/
 *.py[cod]
 *$py.class
