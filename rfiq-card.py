@@ -288,11 +288,19 @@ def worker (labs, groomer, endpoint, arguments):
 
 ########################################################################################################################
 if __name__ == "__main__":
+
+    # real-deal.
+    if not "unit-test" in map(str.lower, sys.argv):
+        from recordedfuture_extension_util.extension_util import make_request
+        print("response:", make_request(request))
+        sys.exit(0)
+
+    # dry-run.
     print("unit testing mode...")
 
     auth_info = \
     {
-        "apikey": "my-api-key"
+        "apikey": None
     }
 
     # Domain.
