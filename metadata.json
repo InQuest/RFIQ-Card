@@ -68,7 +68,7 @@
                 {
                     "key": "ip_address",
                     "label": "Resolved IP Address",
-                    "type": "IpAddress",
+                    "type": "IpAddress"
                  },
                 {
                     "key": "name_servers",
@@ -110,47 +110,47 @@
                     {
                         "key": "file_type",
                         "label": "File Kind",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "mime_type",
                         "label": "MIME Type",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "size",
                         "label": "File Size",
-                        "type": "integer",
+                        "type": "integer"
                      },
                     {
                         "key": "first_seen",
                         "label": "First Seen",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "last_modified",
                         "label": "Last Modified",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "len_context",
                         "label": "Context Length",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "len_ocr",
                         "label": "OCR Length",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "len_metadata",
                         "label": "Metadata Length",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "len_code",
                         "label": "Code Length",
-                        "type": "text",
+                        "type": "text"
                      }
                 ]
             }
@@ -170,32 +170,32 @@
                     {
                         "key": "data_type",
                         "label": "Data Kind",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "data",
                         "label": "Data",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "derived_type",
                         "label": "Derived Data Kind",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "derived_data",
                         "label": "Derived Data",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "source",
                         "label": "Source Name",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "source_url",
                         "label": "Source URL",
-                        "type": "text",
+                        "type": "text"
                      }
                 ]
             }
@@ -215,22 +215,22 @@
                     {
                         "key": "artifact_type",
                         "label": "IOC Kind",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "artifact",
                         "label": "IOC",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "reference_text",
                         "label": "Reference Text",
-                        "type": "text",
+                        "type": "text"
                      },
                     {
                         "key": "reference_link",
                         "label": "Reference URL",
-                        "type": "text",
+                        "type": "text"
                      }
                 ]
             }

@@ -15,7 +15,7 @@ import threading
 """
 
 DEBUG     = True
-TIMEOUT   = 30
+TIMEOUT   = 90
 DATASTORE = {}
 
 ########################################################################################################################
@@ -134,7 +134,7 @@ def request (request_dict, auth_info):
     """
 
     # instantiate labs, pull indicator from request dictionary, setup shared variable response dictionary.
-    labs = inquestlabs.inquestlabs_api(auth_info["apikey"])
+    labs = inquestlabs.inquestlabs_api(auth_info["apikey"], verify_ssl=False)
     ioc  = request_dict["entity"]["name"]
     kind = request_dict["entity"]["type"]
     jobs = []
@@ -295,13 +295,14 @@ if __name__ == "__main__":
         print("response:", make_request(request))
         sys.exit(0)
 
-    # dry-run.
-    print("unit testing mode...")
-
+    # dry run / testing.
     auth_info = \
     {
-        "apikey": None
+        "apikey": open("api.key").read().strip()
     }
+
+        # dry-run.
+    print("unit testing mode with key: %s" % auth_info['apikey'])
 
     # Domain.
     request_dict = \
