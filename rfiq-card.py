@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+
+import re
 import sys
 import json
 import time
@@ -8,15 +10,44 @@ import inquestlabs
 import threading
 
 """
-- metadata must be superset of all JSON.
-- multiprocessing has to be swapped with threading (jython behind the scenes).
-- requests package may need to be converted to wheel.
-- update timeout to be .9 * RF_TIMEOUT
+Notes:
+    - metadata must be superset of all JSON.
+    - multiprocessing has to be swapped with threading (jython behind the scenes).
+    - requests package may need to be converted to wheel.
+    - update timeout to be .9 * RF_TIMEOUT
+    - MAX_LIST controls max number of returned items.
 """
 
 DEBUG     = True
 TIMEOUT   = 90
 DATASTORE = {}
+MAX_LIST  = 5
+OVERVIEW  = "InQuest Labs Intelligence is sourced from numerous locations in parallel and comprises of file data (DFI),"
+OVERVIEW += " aggregate reputation information (Rep-DB/OSINT), and crawled/relevant conversations (IOC-DB/SOCMINT)."
+OVERVIEW += " Follow the permalinks for further details, a max of %d entries are displayed here." % MAX_LIST
+
+########################################################################################################################
+def commify (number):
+    """
+    If given a number, format it into a human readable string with commas, otherwise return the supplied value back.
+    """
+
+    # if we're not dealing with a number, return the original value.
+    try:
+        int(number)
+    except:
+        return number
+
+    # convert from integer to one with strings.
+    number     = str(number)
+    processing = 1
+    regex      = re.compile(r"^(-?\d+)(\d{3})")
+
+    while processing:
+        (number, processing) = regex.subn(r"\1,\2", number)
+
+    return number
+
 
 ########################################################################################################################
 def groom_dfidb (data):
@@ -24,23 +55,57 @@ def groom_dfidb (data):
     data is a list.
     """
 
-    groomed = []
-    ok_keys = \
+    malicious = 0
+    groomed   = []
+    ok_keys   = \
     [
-        "attribute", "classification", "file_type", "first_seen", "last_modified",
+        "classification", "file_type", "first_seen", "last_modified", "num_iocs", "tags",
         "len_code", "len_context", "len_metadata", "len_ocr", "mime_type", "sha256", "size",
     ]
 
-    for d in data:
+    for d in data[:MAX_LIST]:
         gd = {}
 
+        # add all approved keys that contain a value.
         for k, v in d.items():
             if k in ok_keys:
-                gd[k] = v
+                if v not in ["", None]:
+                    gd[k] = commify(v)
 
+        # if any file is malicious, raise the malicious flag.
+        if d['classification'] == "MALICIOUS":
+            malicious += 1
+
+        # splice in a direct link.
+        gd['permalink'] = "https://labs.inquest.net/dfi/sha256/%s" % d['sha256']
+
+        # splice in MAV detection ratio (when available).
+        vt_positives = d.get("vt_positives")
+
+        if vt_positives is not None:
+            gd['mav_ratio'] = "%d%%" % int(float(vt_positives) / 60 * 100)
+
+        # splice in InQuest ML classificaiton (when available).
+        ml_score = d.get("inquest_ml_score")
+
+        if ml_score is None:
+            pass
+
+        elif ml_score == -1:
+            gd['ml_label'] = "BENIGN"
+
+        elif ml_score == 0:
+            gd['ml_label'] = "UNKNOWN"
+
+        else:
+            gd['ml_label'] = "MALICIOUS with %d%% confidence" % int(ml_score * 100)
+
+        # add to groomed list.
         groomed.append(gd)
 
-    return groomed
+    # return data and overview.
+    overview = "Found %d file hits under DFI, %d of which look malicious" % (len(data), malicious)
+    return groomed, overview
 
 
 ########################################################################################################################
@@ -55,16 +120,26 @@ def groom_iocdb (data):
         "artifact", "artifact_type", "created_date", "reference_link", "reference_text",
     ]
 
-    for d in data:
+    for d in data[:MAX_LIST]:
         gd = {}
 
+        # add all approved keys that contain a value.
         for k, v in d.items():
             if k in ok_keys:
-                gd[k] = v
+                if v not in ["", None]:
+                    gd[k] = commify(v)
 
+        # splice in a direct link.
+        gd['permalink'] = "https://labs.inquest.net/iocdb/search/%s" % d['artifact']
+
+        # add to groomed list.
         groomed.append(gd)
 
-    return groomed
+    # high level overview.
+    overview = "Found %d references under IOC-DB, InQuest Labs curation of SOCMINT data." % len(data)
+
+    # return data and overview.
+    return groomed, overview
 
 
 ########################################################################################################################
@@ -79,16 +154,24 @@ def groom_repdb (data):
         "created_date", "data", "data_type", "derived", "derived_type", "source", "source_url",
     ]
 
-    for d in data:
+    for d in data[:MAX_LIST]:
         gd = {}
 
+        # add all approved keys that contain a value.
         for k, v in d.items():
             if k in ok_keys:
-                gd[k] = v
+                if v not in ["", None]:
+                    gd[k] = commify(v)
 
+        # splice in a direct link.
+        gd['permalink'] = "https://labs.inquest.net/repdb/search/%s" % d['data']
+
+        # add to groomed list.
         groomed.append(gd)
 
-    return groomed
+    # return data and overview.
+    overview = "Found %d references under Rep-DB, InQuest Labs aggregation of OSINT data." % len(data)
+    return groomed, overview
 
 
 ########################################################################################################################
@@ -100,6 +183,9 @@ def groom_lookup (data):
     groomed = {}
     ok_keys = \
     [
+        # shared keys.
+        "indicator",
+
         # IP keys
         "asn", "asn_cidr", "asn_country_code", "asn_date", "asn_description", "asn_registry",
 
@@ -112,7 +198,10 @@ def groom_lookup (data):
         if k in ok_keys:
             groomed[k] = v
 
-    return groomed
+    # splice in a direct link.
+    groomed['permalink'] = "https://labs.inquest.net/search/%s" % data['indicator']
+
+    return groomed, None
 
 
 ########################################################################################################################
@@ -280,10 +369,21 @@ def worker (labs, groomer, endpoint, arguments):
     """
 
     global DATASTORE
+    DATASTORE['permalink'] = "https://labs.inquest.net"
+    DATASTORE['overview']  = [OVERVIEW]
 
+    # call worker and fill relevant endpoint dictionary.
     log("worker-started:%s(%s)" % (endpoint, arguments), minor=True)
-    DATASTORE[endpoint] = groomer(getattr(labs, endpoint)(*arguments))
+    data, overview = groomer(getattr(labs, endpoint)(*arguments))
     log("worker-completed:%s(%s)" % (endpoint, arguments), minor=True)
+
+    # when available, save the data under the relevant endpoint.
+    if data:
+        DATASTORE[endpoint] = data
+
+    # when available, expand the overview description.
+    if overview:
+        DATASTORE['overview'].append(overview)
 
 
 ########################################################################################################################
@@ -309,7 +409,7 @@ if __name__ == "__main__":
     {
         "entity":
         {
-            "name": "recordedfuture.com",
+            "name": "cpcwiki.de",
             "type": "InternetDomainName"
         }
     }
@@ -322,7 +422,7 @@ if __name__ == "__main__":
     {
         "entity":
         {
-            "name": "8.8.8.8",
+            "name": "178.62.194.122",
             "type": "IpAddress"
         }
     }
@@ -335,7 +435,7 @@ if __name__ == "__main__":
     {
         "entity":
         {
-            "name": "bd5acbbfc5c2c8b284ec389207af5759",
+            "name": "38f04e48c23dba3596d1773c81cca0abd21a4caeb635d079ed3efcdae193c1bd",
             "type": "Hash"
         }
     }
@@ -348,7 +448,7 @@ if __name__ == "__main__":
     {
         "entity":
         {
-            "name": "http://180.214.239.67/j/p7g/inc/",
+            "name": "http://denytransactioni.site/xleet.zip",
             "type": "URL"
         }
     }

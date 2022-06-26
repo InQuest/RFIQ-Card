@@ -1,10 +1,21 @@
 {
     "entries": [
         {
+            "key": "overview",
+            "label": "InQuest Intelligence",
+            "type": "list",
+            "item":
+            {
+                "type": "text"
+            }
+        },
+        {
             "key": "lookup",
-            "label": "InQuest Lookup",
+            "label": "Domain/IP Overview",
             "type": "dict",
-            "entries": [
+            "collapse": true,
+            "entries":
+            [
                 {
                     "key": "asn",
                     "label": "ASN",
@@ -74,7 +85,8 @@
                     "key": "name_servers",
                     "label": "Name Servers",
                     "type": "list",
-                    "item": {
+                    "item":
+                    {
                         "type": "InternetDomainName"
                     }
                  },
@@ -92,16 +104,38 @@
                     "key": "registrar",
                     "label": "Registrar",
                     "type": "text"
-                 }
+                 },
+                 {
+                    "key": "permalink",
+                    "label": "More info",
+                    "type": "link"
+                }
             ]
         },
         {
             "key": "dfi_search",
-            "label": "InQuest DFIdb Search",
+            "label": "Deep File Inspection (DFI)",
             "type": "list",
-            "item": {
+            "collapse": true,
+            "item":
+            {
                 "type" : "dict",
                 "entries": [
+                    {
+                        "key": "classification",
+                        "label": "Overall File Classification",
+                        "type": "text"
+                     },
+                    {
+                        "key": "mav_ratio",
+                        "label": "Multi-AV Detection Ratio",
+                        "type": "text"
+                     },
+                    {
+                        "key": "ml_label",
+                        "label": "InQuest ML Classification",
+                        "type": "text"
+                     },
                     {
                         "key": "sha256",
                         "label": "SHA256 File Hash",
@@ -120,7 +154,7 @@
                     {
                         "key": "size",
                         "label": "File Size",
-                        "type": "integer"
+                        "type": "text"
                      },
                     {
                         "key": "first_seen",
@@ -133,33 +167,45 @@
                         "type": "text"
                      },
                     {
+                        "key": "num_iocs",
+                        "label": "Extracted IOCs",
+                        "type": "text"
+                     },
+                    {
                         "key": "len_context",
-                        "label": "Context Length",
+                        "label": "Extracted Bytes: Context",
                         "type": "text"
                      },
                     {
                         "key": "len_ocr",
-                        "label": "OCR Length",
+                        "label": "Extracted Bytes: OCR",
                         "type": "text"
                      },
                     {
                         "key": "len_metadata",
-                        "label": "Metadata Length",
+                        "label": "Extracted Bytes: Metadata",
                         "type": "text"
                      },
                     {
                         "key": "len_code",
-                        "label": "Code Length",
+                        "label": "Extracted Bytes: Code",
                         "type": "text"
-                     }
+                     },
+                    {
+                        "key": "permalink",
+                        "label": "More info",
+                        "type": "link"
+                    }
                 ]
             }
         },
         {
             "key": "repdb_search",
-            "label": "InQuest RepDB Search",
+            "label": "Aggregated Reputation Reports (OSINT)",
             "type": "list",
-            "item": {
+            "collapse": true,
+            "item":
+            {
                 "type" : "dict",
                 "entries": [
                     {
@@ -196,15 +242,22 @@
                         "key": "source_url",
                         "label": "Source URL",
                         "type": "text"
-                     }
+                     },
+                    {
+                        "key": "permalink",
+                        "label": "More info",
+                        "type": "link"
+                    }
                 ]
             }
         },
         {
             "key": "iocdb_search",
-            "label": "InQuest IOCdb Search",
+            "label": "Crawled/Relevant Discussions (SOCMINT)",
             "type": "list",
-            "item": {
+            "collapse": true,
+            "item":
+            {
                 "type" : "dict",
                 "entries": [
                     {
@@ -230,8 +283,13 @@
                     {
                         "key": "reference_link",
                         "label": "Reference URL",
-                        "type": "text"
-                     }
+                        "type": "link"
+                     },
+                    {
+                        "key": "permalink",
+                        "label": "More info",
+                        "type": "link"
+                    }
                 ]
             }
         }
