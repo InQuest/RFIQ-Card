@@ -9,7 +9,7 @@
         "URL": "Search REPdb, IOCdb, and DFIdb for a given URL."
     },
     "access_type": "community",
-    "auto_run": false,
+    "auto_run": true,
     "source": "rfiq-card.py",
     "libs": [
         "docopt.py",
