@@ -201,7 +201,7 @@
         },
         {
             "key": "repdb_search",
-            "label": "Aggregated Reputation Reports (OSINT)",
+            "label": "Rep-DB: Aggregated Reputation Reports (OSINT)",
             "type": "list",
             "collapse": true,
             "item":
@@ -253,7 +253,7 @@
         },
         {
             "key": "iocdb_search",
-            "label": "Crawled/Relevant Discussions (SOCMINT)",
+            "label": "IOC-DB: Crawled/Relevant Discussions (SOCMINT)",
             "type": "list",
             "collapse": true,
             "item":
