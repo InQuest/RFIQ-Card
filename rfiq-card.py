@@ -77,7 +77,7 @@ def groom_dfidb (data):
             malicious += 1
 
         # splice in a direct link.
-        gd['permalink'] = "https://labs.inquest.net/dfi/sha256/%s" % d['sha256']
+        gd['permalink'] = "https://labs.inquest.net/rf/dfi/sha256/%s" % d['sha256']
 
         # splice in MAV detection ratio (when available).
         vt_positives = d.get("vt_positives")
@@ -130,7 +130,7 @@ def groom_iocdb (data):
                     gd[k] = commify(v)
 
         # splice in a direct link.
-        gd['permalink'] = "https://labs.inquest.net/iocdb/search/%s" % d['artifact']
+        gd['permalink'] = "https://labs.inquest.net/rf/iocdb/search/%s" % d['artifact']
 
         # add to groomed list.
         groomed.append(gd)
@@ -164,7 +164,7 @@ def groom_repdb (data):
                     gd[k] = commify(v)
 
         # splice in a direct link.
-        gd['permalink'] = "https://labs.inquest.net/repdb/search/%s" % d['data']
+        gd['permalink'] = "https://labs.inquest.net/rf/repdb/search/%s" % d['data']
 
         # add to groomed list.
         groomed.append(gd)
@@ -199,7 +199,7 @@ def groom_lookup (data):
             groomed[k] = v
 
     # splice in a direct link.
-    groomed['permalink'] = "https://labs.inquest.net/search/%s" % data['indicator']
+    groomed['permalink'] = "https://labs.inquest.net/rf/search/%s" % data['indicator']
 
     return groomed, None
 
