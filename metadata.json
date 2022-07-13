@@ -139,7 +139,7 @@
                     {
                         "key": "sha256",
                         "label": "SHA256 File Hash",
-                        "type": "text"
+                        "type": "hash"
                      },
                     {
                         "key": "file_type",

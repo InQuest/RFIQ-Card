@@ -151,7 +151,7 @@ def groom_repdb (data):
     groomed = []
     ok_keys = \
     [
-        "created_date", "data", "data_type", "derived", "derived_type", "source", "source_url",
+        "created_date", "data", "data_type", "derived_data", "derived_type", "source", "source_url",
     ]
 
     for d in data[:MAX_LIST]:
@@ -195,7 +195,7 @@ def groom_lookup (data):
     ]
 
     for k, v in data.items():
-        if k in ok_keys:
+        if k in ok_keys and v:
             groomed[k] = v
 
     # splice in a direct link.
