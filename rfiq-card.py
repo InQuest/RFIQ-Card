@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-
+import os
 import re
 import sys
 import json
@@ -25,6 +25,9 @@ MAX_LIST  = 5
 OVERVIEW  = "InQuest Labs Intelligence is sourced from numerous locations in parallel and comprises of file data (DFI),"
 OVERVIEW += " aggregate reputation information (Rep-DB/OSINT), and crawled/relevant conversations (IOC-DB/SOCMINT)."
 OVERVIEW += " Follow the permalinks for further details, a max of %d entries are displayed here." % MAX_LIST
+
+# hard-coded API key.
+APIKEY = None
 
 ########################################################################################################################
 def commify (number):
@@ -222,8 +225,20 @@ def request (request_dict, auth_info):
     entry port for RecordedFuture Intel Card.
     """
 
+    # apikey priority order: hard coded, function supplied, configuration file.
+    apikey = APIKEY
+
+    if not apikey:
+        apikey = auth_info.get("apikey")
+
+    if not apikey and os.path.exists("api.key"):
+        apikey = open("api.key").read().strip()
+
+    if not apikey:
+        raise Exception("no apikey found")
+
     # instantiate labs, pull indicator from request dictionary, setup shared variable response dictionary.
-    labs = inquestlabs.inquestlabs_api(auth_info["apikey"], verify_ssl=False)
+    labs = inquestlabs.inquestlabs_api(apikey, verify_ssl=False)
     ioc  = request_dict["entity"]["name"]
     kind = request_dict["entity"]["type"]
     jobs = []
