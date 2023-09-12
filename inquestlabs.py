@@ -23,8 +23,10 @@ Usage:
     inquestlabs [options] yara hexcase <instring>
     inquestlabs [options] yara uint <instring> [--offset=<offset>] [--hex]
     inquestlabs [options] yara widere <regex> [(--big-endian|--little-endian)]
+    inquestlabs [options] yara cidr <ipv4>
     inquestlabs [options] lookup ip <ioc>
     inquestlabs [options] lookup domain <ioc>
+    inquestlabs [options] report <ioc>
     inquestlabs [options] stats
     inquestlabs [options] setup <apikey>
     inquestlabs [options] trystero list-days
@@ -44,6 +46,7 @@ Options:
     --little-endian     Toggle little endian.
     --offset=<offset>   Specify an offset other than 0 for the trigger.
     --proxy=<proxy>     Intermediate proxy
+    --timeout=<timeout> Maximum amount of time to wait for IOC report.
     --verbose=<level>   Verbosity level, outputs to stderr [default: 0].
     --version           Show version.
 """
@@ -68,6 +71,8 @@ except:
     pass
 
 # standard libraries.
+import multiprocessing
+import ipaddress
 import hashlib
 import random
 import time
@@ -75,17 +80,32 @@ import json
 import sys
 import os
 import re
+# from importlib.metadata import version
 
-__version__ = 1.0
+# extract version from installed package metadata
+__application_name__ = "inquestlabs"
+__version__ = "1.2.4"
+# __version__ = version(__application_name__)
+__full_version__ = f"{__application_name__} {__version__}"
 
-VALID_CAT  = ["ext", "hash", "ioc"]
-VALID_EXT  = ["code", "context", "metadata", "ocr"]
-VALID_HASH = ["md5", "sha1", "sha256", "sha512"]
-VALID_IOC  = ["domain", "email", "filename", "filepath", "ip", "registry", "url", "xmpid"]
+VALID_CAT    = ["ext", "hash", "ioc"]
+VALID_EXT    = ["code", "context", "metadata", "ocr"]
+VALID_HASH   = ["md5", "sha1", "sha256", "sha512"]
+VALID_IOC    = ["domain", "email", "filename", "filepath", "ip", "registry", "url", "xmpid"]
+VALID_DOMAIN = re.compile("[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+")
 
 # verbosity levels.
 INFO  = 1
 DEBUG = 2
+
+########################################################################################################################
+def worker_proxy (labs, endpoint, arguments, response):
+    """
+    proxy function for multiprocessing wrapper used by inquestlabs_api.report()
+    """
+
+    response[endpoint] = getattr(labs, endpoint)(*arguments)
+
 
 ########################################################################################################################
 class inquestlabs_exception(Exception):
@@ -125,7 +145,7 @@ class inquestlabs_api:
         self.api_key     = api_key
         self.base_url    = base_url
         self.config_file = config
-        self.retries = retries
+        self.retries     = retries
         self.proxies     = proxies
         self.verify_ssl  = verify_ssl
         self.verbosity   = verbose
@@ -195,7 +215,7 @@ class inquestlabs_api:
             self.__VERBOSE("api_key_source=%s" % self.api_key_source, INFO)
 
     ####################################################################################################################
-    def API (self, api, data=None, path=None, method="GET", raw=False):
+    def API (self, api, data=None, path=None, method="GET", raw=False, params=None):
         """
         Internal API wrapper.
 
@@ -209,6 +229,8 @@ class inquestlabs_api:
         :param method: API method, one of "GET" or "POST".
         :type  raw:    bool
         :param raw:    Default behavior is to expect JSON encoded content, raise this flag to expect raw data.
+        :type  method: str
+        :param method: Set a parameter for the request.
 
         :rtype:  dict | str
         :return: Response dictionary or string if 'raw' flag is raised.
@@ -239,6 +261,7 @@ class inquestlabs_api:
             "headers" : headers,
             "proxies" : self.proxies,
             "verify"  : self.verify_ssl,
+            "params"  : params
         }
 
         # make attempts to dance with the API endpoint, use a jittered exponential back-off delay.
@@ -814,6 +837,59 @@ class inquestlabs_api:
 
         return self.API("/iocdb/sources")
 
+    ########################################################################################################################
+    def is_ipv4 (self, s):
+        # we prefer to use the ipaddress third-party module here, but fall back to a regex solution.
+        try:
+            import ipaddress
+        except:
+            if re.match("^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", s):
+                return True
+            else:
+                return False
+
+        # python 2/3 compat
+        try:
+            s = unicode(s)
+        except:
+            pass
+
+        # is instance of IPv4 address?
+        try:
+            return isinstance(ipaddress.ip_address(s), ipaddress.IPv4Address)
+        except:
+            return False
+
+
+    ########################################################################################################################
+    def is_ipv6 (self, s):
+        # best effort pull in third-party module.
+        try:
+            import ipaddress
+        except:
+            return None
+
+        # python 2/3 compat
+        try:
+            s = unicode(s)
+        except:
+            pass
+
+        # is instance of IPv6 address?
+        try:
+            return isinstance(ipaddress.ip_address(s), ipaddress.IPv6Address)
+        except:
+            return False
+
+
+    ####################################################################################################################
+    def is_domain (self, s):
+        return VALID_DOMAIN.match(s)
+
+    ####################################################################################################################
+    def is_ip (self, s):
+        return self.is_ipv4(s) or self.is_ipv6(s)
+
     ####################################################################################################################
     def lookup (self, kind, ioc):
         """
@@ -919,6 +995,86 @@ class inquestlabs_api:
         """
 
         return self.API("/repdb/sources")
+
+    ####################################################################################################################
+    def report (self, ioc, timeout=None):
+        """
+        Leverage multiprocessing to produce a single report for the supplied IP/domain indicator which includes data
+        from: lookup, DFIdb, REPdb, and IOCdb.
+
+        :type  ioc:     str
+        :param ioc:     Indicator to lookup (IP, domain, URL)
+        :type timeout:  integer
+        :param timeout: Maximum time given to producing the IOC report (default=60).
+
+        :rtype:  dict
+        :return: API response.
+        """
+
+        # default timeout.
+        if timeout is None:
+            timeout = 60
+
+        # parallelization.
+        jobs = []
+        mngr = multiprocessing.Manager()
+        resp = mngr.dict()
+
+        # what kind of IOC are we dealing with.
+        if self.is_ip(ioc):
+            kind = "ip"
+        elif self.is_domain(ioc):
+            kind = "domain"
+        elif ioc.startswith("http"):
+            kind = "url"
+        else:
+            raise inquestlabs_exception("could not determine indicator type for %s" % ioc)
+
+        # only IPs and domains get lookups.
+        if kind in ["ip", "domain"]:
+            job = multiprocessing.Process(target=worker_proxy, args=(self, "lookup", [kind, ioc], resp))
+            jobs.append(job)
+            job.start()
+
+        # all IOCs get compared against DFIdb, REPdb, and IOCdb
+        job = multiprocessing.Process(target=worker_proxy, args=(self, "dfi_search", ["ioc", kind, ioc], resp))
+        jobs.append(job)
+        job.start()
+
+        job = multiprocessing.Process(target=worker_proxy, args=(self, "repdb_search", [ioc], resp))
+        jobs.append(job)
+        job.start()
+
+        job = multiprocessing.Process(target=worker_proxy, args=(self, "iocdb_search", [ioc], resp))
+        jobs.append(job)
+        job.start()
+
+        # wait for jobs to complete.
+        self.__VERBOSE("waiting up to %d seconds for %d jobs to complete" % (timeout, len(jobs)))
+
+        # wait for jobs to complete, up to timeout
+        start = time.time()
+
+        while time.time() - start <= timeout:
+            if not any(job.is_alive() for job in jobs):
+                # all the processes are done, break now.
+                break
+
+            # this prevents CPU hogging.
+            time.sleep(1)
+
+        else:
+            self.__VERBOSE("timeout reached, killing jobs...")
+            for job in jobs:
+                job.terminate()
+                job.join()
+
+        elapsed = time.time() - start
+        self.__VERBOSE("completed all jobs in %d seconds" % elapsed)
+
+        # return the combined response.
+        return dict(resp)
+
 
     ####################################################################################################################
     def stats (self):
@@ -1091,6 +1247,23 @@ class inquestlabs_api:
 
         return self.API("/yara/trigger", dict(trigger=magic, offset=offset, is_hex=is_hex))
 
+    ####################################################################################################################
+    def cidr_to_regex (self, data):
+        """
+        Produce a regular expression from a IPv4 CIDR notation in a form suitable for usage as a YARA string.
+
+        :type  regex:  str
+        :param regex:  Regular expression to convert.
+
+        :rtype:  str
+        :return: Regex string suitable for YARA.
+        """
+
+        # dance with the API and return results.
+        return self.API("/yara/cidr2regex", params={
+            "cidr": data
+        })
+
 ########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################
@@ -1262,6 +1435,10 @@ def main ():
         elif args['widere']:
             print(labs.yara_widere(args['<regex>'], endian))
 
+        # inquestlabs [options] yara cidr <ipv4>
+        elif args['cidr']:
+            print(labs.cidr_to_regex(args['<ipv4>']))
+
         # huh?
         else:
             raise inquestlabs_exception("yara argument parsing fail.")
@@ -1269,13 +1446,17 @@ def main ():
     ### IP/DOMAIN LOOKUP ###############################################################################################
     elif args['lookup']:
         if args['ip']:
-            print(labs.lookup('ip', args['<ioc>']))
+            print(json.dumps(labs.lookup('ip', args['<ioc>'])))
 
         elif args['domain']:
-            print(labs.lookup('domain', args['<ioc>']))
+            print(json.dumps(labs.lookup('domain', args['<ioc>'])))
 
         else:
             raise inquestlabs_exception("'lookup' supports 'ip' and 'domain'.")
+
+    ### IP/DOMAIN/URL REPORT ###########################################################################################
+    elif args['report']:
+        print(json.dumps(labs.report(args['<ioc>'], args['--timeout'])))
 
     ### MISCELLANEOUS ##################################################################################################
     elif args['stats']:
