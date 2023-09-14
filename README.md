@@ -12,11 +12,15 @@ This repository houses a Recorded Future Intelligece Card Extension that leverag
 
 Manually:
 
-`tar zcvf rfiq_extension.tgz docopt.py extension.json inquestlabs.py iq_full.png iq_thumbnail.png metadata.json requests/ rfiq-card.py`
+```bash
+tar zcvf rfiq_extension.tgz docopt.py extension.json inquestlabs.py iq_full.png iq_thumbnail.png metadata.json requests/ rfiq-card.py
+```
 
 Automatically:
 
-`./build.sh`
+```bash
+./build.sh
+```
 
 ## Example Output
 
